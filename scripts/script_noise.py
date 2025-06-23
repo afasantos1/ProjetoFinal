@@ -13,7 +13,7 @@ def add_noise(image, noise_level):
     return Image.fromarray(noisy_img)
 
 # Specify the folder path containing images
-folder_path = "./Imagens_tratadas"  # Replace with your folder path
+folder_path = "../imagens_treino/Belgium_2009/replicas"  # Replace with your folder path
 
 # Loop through all files in the folder
 for filename in os.listdir(folder_path):

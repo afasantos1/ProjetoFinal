@@ -21,18 +21,18 @@ def replicate_images(input_folder, output_folder, rotation_angle=15):
             base_name = os.path.splitext(filename)[0]
             
             # Save original image
-            original_output = os.path.join(output_folder, f"{base_name}_original.webp")
-            original_img.save(original_output, 'WEBP', quality=95)
+            original_output = os.path.join(output_folder, f"{base_name}_original.png")
+            original_img.save(original_output, 'PNG', quality=95)
             
             # Create and save left rotation
             left_rotated = original_img.rotate(rotation_angle, expand=True)
-            left_output = os.path.join(output_folder, f"{base_name}_left.webp")
-            left_rotated.save(left_output, 'WEBP', quality=95)
+            left_output = os.path.join(output_folder, f"{base_name}_left.png")
+            left_rotated.save(left_output, 'PNG', quality=95)
             
             # Create and save right rotation
             right_rotated = original_img.rotate(-rotation_angle, expand=True)
-            right_output = os.path.join(output_folder, f"{base_name}_right.webp")
-            right_rotated.save(right_output, 'WEBP', quality=95)
+            right_output = os.path.join(output_folder, f"{base_name}_right.png")
+            right_rotated.save(right_output, 'PNG', quality=95)
             
             # Close the original image
             original_img.close()
@@ -42,8 +42,8 @@ def replicate_images(input_folder, output_folder, rotation_angle=15):
 # Example usage
 if __name__ == "__main__":
     # Specify your input and output folders
-    input_dir = "./Commemoratives/2025/Images"    # Folder containing original images
-    output_dir = "Imagens_tratadas"  # Folder where replicated images will be saved
+    input_dir = "../imagens_treino/Belgium_2009/originals"    # Folder containing original images
+    output_dir = "../imagens_treino/Belgium_2009/replicas"  # Folder where replicated images will be saved
     
     try:
         replicate_images(input_dir, output_dir, rotation_angle=15)

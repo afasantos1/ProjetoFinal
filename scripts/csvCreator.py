@@ -43,6 +43,6 @@ def process_images(folder_path, output_csv):
     print(f"CSV file '{output_csv}' has been created successfully.")
 
 # Example usage
-folder_path = '../alt_imgs'  # Replace with the actual folder path
-output_csv = '../alt_imgs/dados_teste.csv'  # Desired output CSV file name
+folder_path = '../imagens_treino/FR2007 treaty/resized-replicas'  # Replace with the actual folder path
+output_csv = '../imagens_treino/FR2007 treaty/dados_France2007.csv/'  # Desired output CSV file name
 process_images(folder_path, output_csv)
