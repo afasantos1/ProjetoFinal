@@ -8,7 +8,7 @@ def adjust_brightness(image, factor):
     return enhancer.enhance(factor)
 
 # Specify the folder path containing images
-folder_path = "Imagens_tratadas" 
+folder_path = "../imagens_treino/Belgium_2009/replicas" 
 
 # Loop through all files in the folder
 for filename in os.listdir(folder_path):

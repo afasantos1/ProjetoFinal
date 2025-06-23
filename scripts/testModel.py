@@ -1,25 +1,21 @@
 import os
-import time
 import torch
-from PIL import Image
-import pandas as pd
 from skimage import io
+import pandas as pd
 import numpy as np
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader, Subset
-from torchvision import transforms
-from sklearn.model_selection import train_test_split
 
 # --- Define Data Transformations ---
 data_transforms = transforms.Compose([
-    transforms.ToPILImage(),  # Converts numpy array to PIL Image
-    transforms.ToTensor(),    # Converts to tensor and scales [0,1]
-    transforms.Normalize(mean=[0.5, 0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5, 0.5])  # Normalize
+    transforms.ToPILImage(),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.5, 0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5, 0.5])
 ])
 
-# --- Define the Neural Network ---
+# --- Define the Neural Network (Must match the trained one) ---
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
@@ -28,7 +24,7 @@ class Net(nn.Module):
         self.conv2 = nn.Conv2d(6, 16, 5)
         self.fc1 = nn.Linear(16 * 5 * 5, 120)
         self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 496)
+        self.fc3 = nn.Linear(84, 497)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
@@ -42,7 +38,6 @@ class Net(nn.Module):
 
 # --- Define the Custom Dataset ---
 class CoinsDataset(Dataset):
-    """Coins dataset."""
     def __init__(self, csv_file, root_dir, transform=None):
         self.coins_data = pd.read_csv(csv_file)
         self.root_dir = root_dir
@@ -55,106 +50,43 @@ class CoinsDataset(Dataset):
         label = self.coins_data.iloc[idx, 0]
         img_name = os.path.join(self.root_dir, self.coins_data.iloc[idx, 1])
         image = io.imread(img_name)
-
         if self.transform:
             image = self.transform(image)
+        return image, label
 
-        return image, label  # Returns (image, label)
-
-# ------------------------ Main ---------------------------
-# Set parameters and file paths
-csv_file = 'image_data.csv'
-root_dir = '../Imagens_tratadas2'
-alt_csv_file = '../alt_imgs/file_list.csv'
-alt_root_dir = '../alt_imgs'
-
-# Load main dataset (for training and original testing)
-dataset = CoinsDataset(csv_file, root_dir, transform=data_transforms)
-
-# Create label list from the dataset
-labels = dataset.coins_data.iloc[:, 0].values
-
-# Split into training (90%) and testing (10%) sets
-train_indices, test_indices = train_test_split(
-    np.arange(len(dataset)), test_size=0.1, stratify=labels, random_state=42
-)
-
-# Create subset datasets for training and original test set
-train_dataset = Subset(dataset, train_indices)
-test_dataset = Subset(dataset, test_indices)
-
-# Define DataLoaders for training and original test set
-train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=4)
-test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False, num_workers=4)
-
-# --- Set up the Model, Loss, and Optimizer ---
+# --- Load the Model ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-net = Net().to(device)
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=0.0003)
+model = Net().to(device)
+model.load_state_dict(torch.load("./Prototype.pth", map_location=device))
+model.eval()
+print("Model loaded successfully.")
 
-# --- Train the Model ---
-num_epochs = 15
-t0 = time.time()
-
-for epoch in range(num_epochs):
-    net.train()  # Set model to training mode
-    running_loss = 0.0
-
-    for inputs, labels in train_loader:
-        inputs, labels = inputs.to(device), labels.to(device)
-
-        optimizer.zero_grad()
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item()
-
-    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}")
-
-print("Finished Training")
-
-# Save model
-PATH = './Prototype.pth'
-torch.save(net.state_dict(), PATH)
-print(f"Model saved to {PATH}")
-
-# --- Define a Function to Evaluate the Model ---
+# --- Evaluation Function ---
 def evaluate_model(loader, description="Test"):
-    net.eval()  # Set model to evaluation mode
     correct = 0
     total = 0
     with torch.no_grad():
         for inputs, labels in loader:
             inputs, labels = inputs.to(device), labels.to(device)
-            outputs = net(inputs)
+            outputs = model(inputs)
             _, predicted = torch.max(outputs, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     accuracy = 100 * correct / total
     print(f"{description} Accuracy: {accuracy:.2f}%")
-    print(f"Correct: {correct} vs Total: {total}")
+    print(f"Correct: {correct} / {total}")
 
-# --- Evaluate on the Original Test Group ---
-evaluate_model(test_loader, description="Original Test Group")
+# --- Load Datasets and Evaluate ---
+# Original test group
+original_csv = 'image_data.csv'
+original_root = '../Imagens_tratadas2'
+original_dataset = CoinsDataset(original_csv, original_root, transform=data_transforms)
+original_loader = DataLoader(original_dataset, batch_size=8, shuffle=False, num_workers=4)
+evaluate_model(original_loader, description="Original Test Group")
 
-# --- Alternative Test with alt_imgs/file_list.csv ---
-alt_dataset = CoinsDataset(alt_csv_file, alt_root_dir, transform=data_transforms)
+# Alternative test group
+alt_csv = '../alt_imgs2/dados_teste2.csv'
+alt_root = '../alt_imgs2'
+alt_dataset = CoinsDataset(alt_csv, alt_root, transform=data_transforms)
 alt_loader = DataLoader(alt_dataset, batch_size=8, shuffle=False, num_workers=4)
 evaluate_model(alt_loader, description="Alternative Test Group")
-print(f"Total training time: {time.time() - t0:.2f} seconds")
-
-# --- Additional Information about Label Distribution ---
-unique_train_labels = set(dataset.coins_data.iloc[train_indices, 0])
-unique_test_labels = set(dataset.coins_data.iloc[test_indices, 0])
-
-print(f"Number of unique labels in training set: {len(unique_train_labels)}")
-print(f"Number of unique labels in test set: {len(unique_test_labels)}")
-
-missing_labels = unique_train_labels - unique_test_labels
-if missing_labels:
-    print(f"Labels in training but NOT in test: {missing_labels}")
-else:
-    print("All labels are present in both sets.")

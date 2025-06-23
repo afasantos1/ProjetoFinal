@@ -62,8 +62,8 @@ def resize_images(input_folder, output_folder, target_size):
 # Example usage
 if __name__ == "__main__":
     # Set your parameters here
-    INPUT_FOLDER = "../Imagens_tratadas"    # Folder with original PNGs
-    OUTPUT_FOLDER = "../Imagens_tratadas2" # Folder where resized PNGs will be saved
+    INPUT_FOLDER = "../imagens_treino/PT2016-2/"    # Folder with original PNGs
+    OUTPUT_FOLDER = "../imagens_treino/PT2016-2/" # Folder where resized PNGs will be saved
     TARGET_SIZE = (500, 500)         # Desired width and height in pixels
     
     resize_images(INPUT_FOLDER, OUTPUT_FOLDER, TARGET_SIZE)
