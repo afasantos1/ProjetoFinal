@@ -1,12 +1,17 @@
-import pandas as pd
+import torch
+from torchvision import models
+import torch.nn as nn
 
-# Load the CSV file
-df = pd.read_csv('output_images.csv')
+# Load base MobileNetV2 (no pretrained weights, because you're loading your own)
+model = models.mobilenet_v2(pretrained=False)
 
-# Subtract 1 from the 'class' column (adjust column name if different)
-df['id'] = df['id'] - 1
+# Modify the classifier to match the fine-tuned model (497 classes)
+model.classifier[1] = nn.Linear(model.last_channel, 497)
 
-# Save the modified DataFrame to a new CSV file (optional)
-df.to_csv('output_images.csv', index=False)
+# Load fine-tuned weights (trained on 497 classes)
+model.load_state_dict(torch.load("mobilenet_v2-finetuned.pth", map_location=torch.device('cpu')))
+model.eval()
 
-# Or if you're using it directly, you can now use df['class'] with 0-indexed labels
+# Convert to TorchScript for PyTorch Mobile
+scripted_model = torch.jit.script(model)
+scripted_model.save("model.pt")
