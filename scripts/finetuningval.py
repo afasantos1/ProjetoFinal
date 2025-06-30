@@ -1,3 +1,9 @@
+"""
+@file finetuningval.py
+@brief Este script carrega um modelo MobileNetV2 previamente treinado e avalia o seu desempenho
+       em vários conjuntos de dados de imagens de moedas.
+       Pode ser adaptado para funcionar com outros modelos ou datasets, efetuando as mudanças necessárias.
+"""
 import os
 import torch
 import pandas as pd
@@ -37,20 +43,38 @@ data_transforms = transforms.Compose([
 # Dataset
 # -------------------------------
 class CoinsDataset(Dataset):
+    """
+    @brief Um Dataset PyTorch personalizado para carregar imagens de moedas e os seus IDs.
+    """
     def __init__(self, csv_file, root_dir, transform=None):
+        """
+        @brief Inicializa o CoinsDataset.
+        @param csv_file Caminho para o ficheiro CSV contendo dados das imagens (IDs e nomes de ficheiro).
+        @param root_dir Pasta onde os ficheiros de imagem estão localizados.
+        @param transform Transformação opcional a ser aplicada numa amostra.
+        """
         self.coins_data = pd.read_csv(csv_file)
         self.root_dir = root_dir
         self.transform = transform
 
     def __len__(self):
+        """
+        @brief Retorna o número total de amostras no dataset.
+        @return O número de amostras.
+        """
         return len(self.coins_data)
 
     def __getitem__(self, idx):
+        """
+        @brief Recupera um item (imagem e o seu ID) do dataset.
+        @param idx Índice do item a ser recuperado.
+        @return Uma tupla contendo a imagem (Tensor) e o seu ID (int).
+        """
         label = int(self.coins_data.iloc[idx, 0])
         img_path = os.path.join(self.root_dir, self.coins_data.iloc[idx, 1])
         img = io.imread(img_path)
 
-        if img.shape[2] == 4:
+        if img.shape[2] == 4: # Handle images with alpha channel
             img = img[:, :, :3]
 
         if self.transform:
@@ -62,6 +86,12 @@ class CoinsDataset(Dataset):
 # Avaliação
 # -------------------------------
 def evaluate(model, loader, description="Avaliação"):
+    """
+    @brief Avalia o desempenho do modelo (precisão) num dado DataLoader.
+    @param model O modelo PyTorch a ser avaliado.
+    @param loader O DataLoader contendo os dados de avaliação.
+    @param description Uma string que descreve o conjunto de avaliação para impressão.
+    """
     model.eval()
     correct = total = 0
     with torch.no_grad():
@@ -81,7 +111,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Carrega primeiro o modelo com o número correto de saídas
 model = models.mobilenet_v2()
-model.classifier[1] = nn.Linear(model.classifier[1].in_features, 497)  # ← Ajuste correto
+# Ajusta a ultima camada do modelo de forma a ter a mesma quantidade de classes do treino.
+# O modelo original da ImageNet tem 1000 classes, por isso temos de alterar para 497
+model.classifier[1] = nn.Linear(model.classifier[1].in_features, 497)
 model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
 model.to(device)
 
@@ -95,6 +127,7 @@ for csv_path, root_path in CSV_ROOT_PAIRS:
 
     labels = ds.coins_data.iloc[:, 0].values
     label_counts = Counter(labels)
+    # Filtra as labels que aparecem menos de 2 vezes, ja que tambem nao iriam ser usadas no treino
     valid_indices = [i for i, label in enumerate(labels) if label_counts[label] >= 2]
 
     if not valid_indices:
